@@ -108,19 +108,16 @@ var ShellCmd = &gcli.Command{
 	},
 }
 
+var rport = 22
+
 var RunCmd = &gcli.Command{
 	Name: "run",
 	Desc: "执行设备SHELL命令",
 	Config: func(c *gcli.Command) {
 		c.AddArg("commands", "SHELL命令列表", true, true)
-		c.AddArg("rport", "设备SSH端口")
+		c.IntOpt(&rport, "rport", "r", 22, "设备SSH端口")
 	},
 	Func: func(c *gcli.Command, args []string) error {
-		rport := 22
-		if c.Arg("rport").HasValue() {
-			rport = c.Arg("rport").Int()
-		}
-
 		result, err := shellRun(rport, strings.Join(args, " "))
 		if err != nil {
 			return err
