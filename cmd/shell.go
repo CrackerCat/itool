@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofmt/itool/idevice"
@@ -17,6 +19,9 @@ import (
 var ShellCmd = &gcli.Command{
 	Name: "shell",
 	Desc: "创建SSH交互环境,需要设备越狱",
+	Subs: []*gcli.Command{
+		RunCmd,
+	},
 	Config: func(c *gcli.Command) {
 		c.AddArg("rport", "设备SSH端口")
 	},
@@ -101,6 +106,79 @@ var ShellCmd = &gcli.Command{
 
 		return nil
 	},
+}
+
+var RunCmd = &gcli.Command{
+	Name: "run",
+	Desc: "执行设备SHELL命令",
+	Config: func(c *gcli.Command) {
+		c.AddArg("commands", "SHELL命令列表", true, true)
+		c.AddArg("rport", "设备SSH端口")
+	},
+	Func: func(c *gcli.Command, args []string) error {
+		rport := 22
+		if c.Arg("rport").HasValue() {
+			rport = c.Arg("rport").Int()
+		}
+
+		result, err := shellRun(rport, strings.Join(args, " "))
+		if err != nil {
+			return err
+		}
+
+		c.Println(string(result))
+
+		return nil
+	},
+}
+
+func shellRun(rport int, cmd string) (result []byte, err error) {
+	device, err := idevice.GetDefaultDevice()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	lport, err := GetAvailablePort()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := forward.Start(ctx, device.UDID, lport, rport, func(s string, err error) {
+		if err != nil {
+			panic(err)
+		}
+	}); err != nil {
+		return nil, err
+	}
+
+	deviceIp := fmt.Sprintf("127.0.0.1:%d", lport)
+	cli, err := newSSHClient(deviceIp)
+	if err != nil {
+		return
+	}
+	defer func(cli *ssh.Client) {
+		_ = cli.Close()
+	}(cli)
+
+	session, err := cli.NewSession()
+	if err != nil {
+		return
+	}
+	defer func(session *ssh.Session) {
+		_ = session.Close()
+	}(session)
+
+	buf := new(bytes.Buffer)
+	session.Stdout = buf
+	session.Stderr = os.Stderr
+	if err := session.Run(cmd); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func newSSHClient(deviceIp string) (*ssh.Client, error) {
