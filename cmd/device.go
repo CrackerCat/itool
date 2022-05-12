@@ -1,0 +1,229 @@
+package cmd
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"text/tabwriter"
+	"time"
+
+	"github.com/gofmt/itool/idevice"
+	"github.com/gofmt/itool/idevice/diagnostics"
+	"github.com/gofmt/itool/idevice/lockdownd"
+	"github.com/gofmt/itool/idevice/syslog"
+	"github.com/gookit/color"
+	"github.com/gookit/gcli/v3"
+)
+
+var InfoCmd = &gcli.Command{
+	Name: "info",
+	Desc: "显示设备信息",
+	Func: func(c *gcli.Command, args []string) error {
+		device, err := idevice.GetDefaultDevice()
+		if err != nil {
+			return err
+		}
+
+		cli, err := lockdownd.NewClient(device.UDID)
+		if err != nil {
+			return err
+		}
+		defer func(cli *lockdownd.Client) {
+			_ = cli.Close()
+		}(cli)
+
+		info, err := cli.GetValues()
+		if err != nil {
+			return err
+		}
+
+		w := new(tabwriter.Writer)
+		w.Init(os.Stdout, 0, 0, 1, ' ', 0)
+
+		_, _ = fmt.Fprintln(w, "- UDID\t: "+info.UniqueDeviceID)
+		_, _ = fmt.Fprintln(w, "- DeviceName\t: "+info.DeviceName)
+		_, _ = fmt.Fprintln(w, "- ProductName\t: "+info.ProductName)
+		_, _ = fmt.Fprintln(w, "- ProductType\t: "+info.ProductType)
+		_, _ = fmt.Fprintln(w, "- ProductVersion\t: "+info.ProductVersion)
+		_, _ = fmt.Fprintln(w, "- CPUArchitecture\t: "+info.CPUArchitecture)
+		_, _ = fmt.Fprintln(w, "- BuildVersion\t: "+info.BuildVersion)
+		_, _ = fmt.Fprintln(w, "- WiFiAddress\t: "+info.WiFiAddress)
+		_, _ = fmt.Fprintln(w, "- DeviceColor\t: "+info.DeviceColor)
+		_, _ = fmt.Fprintln(w, "- HardwareModel\t: "+info.HardwareModel)
+		_, _ = fmt.Fprintln(w, "- UniqueChipID\t: "+fmt.Sprintf("%d", info.UniqueChipID))
+
+		_ = w.Flush()
+
+		return nil
+	},
+}
+
+var RestartCmd = &gcli.Command{
+	Name: "restart",
+	Desc: "重启设备(设备重启后需要重新越狱)",
+	Func: func(c *gcli.Command, args []string) error {
+		device, err := idevice.GetDefaultDevice()
+		if err != nil {
+			return err
+		}
+
+		cli, err := diagnostics.NewClient(device.UDID)
+		if err != nil {
+			return err
+		}
+		defer func(cli *diagnostics.Client) {
+			_ = cli.Close()
+		}(cli)
+
+		return cli.Restart()
+	},
+}
+
+var SyslogCmd = &gcli.Command{
+	Name: "syslog",
+	Desc: "显示设备日志",
+	Config: func(c *gcli.Command) {
+		c.AddArg("key", "过滤关键字")
+	},
+	Func: func(c *gcli.Command, args []string) error {
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
+		defer cancel()
+
+		device, err := idevice.GetDefaultDevice()
+		if err != nil {
+			return err
+		}
+
+		r, err := syslog.Syslog(device.UDID)
+		if err != nil {
+			return err
+		}
+		defer func(r io.ReadCloser) {
+			_ = r.Close()
+		}(r)
+
+		fgWhite := color.FgWhite.Render
+		fgGreen := color.FgGreen.Render
+		fgCyan := color.FgCyan.Render
+		fgRed := color.FgRed.Render
+		fgLiRed := color.FgLightRed.Render
+		fgYellow := color.FgYellow.Render
+		fgLiYellow := color.FgLightYellow.Render
+		fgMagenta := color.FgMagenta.Render
+		white := color.White.Render
+
+		br := bufio.NewReader(r)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+
+				}
+
+				bs, err := br.ReadBytes(0)
+				if err != nil {
+					panic(err)
+				}
+
+				bs = bytes.TrimRight(bs, "\x0a\x00")
+				line := decodeSyslog(bs)
+				ss := strings.Split(line, ">: ")
+				header := strings.Split(ss[0], " ")
+				if c.Arg("key").HasValue() && !strings.Contains(line, c.Arg("key").String()) {
+					continue
+				}
+
+				t, err := time.Parse(time.Stamp, header[0]+" "+header[1]+" "+header[2])
+				if err != nil {
+					panic(err)
+				}
+
+				level := header[5][1:]
+				body := ss[1]
+				switch level {
+				case "Notice":
+					level = fgGreen(level)
+				case "Error":
+					level = fgRed(level)
+					body = fgLiRed(body)
+				case "Warning":
+					level = fgYellow(level)
+					body = fgLiYellow(body)
+				case "Debug":
+					level = fgMagenta(level)
+				default:
+					level = white(level)
+				}
+
+				fmt.Printf(
+					"[%s](%s)[%s]: %s\n",
+					fgWhite(t.Format("01-02 15:04:05")),
+					// gray(msg.DeviceName),
+					fgCyan(header[4]),
+					level,
+					body,
+				)
+			}
+		}()
+
+		<-ctx.Done()
+
+		return nil
+	},
+}
+
+func decodeSyslog(bs []byte) string {
+	specialChar := bytes.Contains(bs, []byte(`\134`))
+	if specialChar {
+		bs = bytes.Replace(bs, []byte(`\134`), []byte(""), -1)
+	}
+	kBackslash := byte(0x5c)
+	kM := byte(0x4d)
+	kDash := byte(0x2d)
+	kCaret := byte(0x5e)
+
+	// Mask for the UTF-8 digit range.
+	kNum := byte(0x30)
+
+	var out []byte
+	for i := 0; i < len(bs); {
+
+		if (bs[i] != kBackslash) || i > (len(bs)-4) {
+			out = append(out, bs[i])
+			i = i + 1
+		} else {
+			if (bs[i+1] == kM) && (bs[i+2] == kCaret) {
+				out = append(out, (bs[i+3]&byte(0x7f))+byte(0x40))
+			} else if bs[i+1] == kM && bs[i+2] == kDash {
+				out = append(out, bs[i+3]|byte(0x80))
+			} else if isDigit(bs[i+1:i+3], kNum) {
+				out = append(out, decodeOctal(bs[i+1], bs[i+2], bs[i+3]))
+			} else {
+				out = append(out, bs[0], bs[1], bs[2], bs[3], bs[4])
+			}
+			i = i + 4
+		}
+	}
+	return string(out)
+}
+
+func isDigit(b []byte, kNum byte) bool {
+	for _, v := range b {
+		if (v & byte(0xf0)) != kNum {
+			return false
+		}
+	}
+	return true
+}
+
+func decodeOctal(x, y, z byte) byte {
+	return (x&byte(0x3))<<byte(6) | (y&byte(0x7))<<byte(3) | z&byte(0x7)
+}
