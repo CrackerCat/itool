@@ -16,19 +16,19 @@ func init() {
 	gcli.CmdHelpTemplate = `{{.Desc}}
 	
 <comment>用法:</>
-  {$binName} [global options] {{if .Cmd.NotStandalone}}<cyan>{{.Cmd.Path}}</> {{end}}[--options ...] [arguments ...]{{ if .Subs }}
-  {$binName} [global options] {{if .Cmd.NotStandalone}}<cyan>{{.Cmd.Path}}</> {{end}}<cyan>SUBCOMMAND</> [--options ...] [arguments ...]{{end}}
+  {$binName} {{if .Cmd.NotStandalone}}<cyan>{{.Cmd.Path}}</> {{end}}[--选项 ...] [参数 ...]{{ if .Subs }}
+  {$binName} {{if .Cmd.NotStandalone}}<cyan>{{.Cmd.Path}}</> {{end}}<cyan>SUBCOMMAND</> [--选项 ...] [参数 ...]{{end}}
 {{if .Options}}
-<comment>Options:</>
+<comment>选项:</>
 {{.Options}}{{end}}{{if .Cmd.Args}}
-<comment>Arguments:</>{{range $a := .Cmd.Args}}
+<comment>参数:</>{{range $a := .Cmd.Args}}
   <info>{{$a.HelpName | printf "%-12s"}}</>{{$a.Desc | ucFirst}}{{if $a.Required}}<red>*</>{{end}}{{end}}
 {{end}}{{ if .Subs }}
-<comment>命令列表:</>{{range $n,$c := .Subs}}
+<comment>子命令列表:</>{{range $n,$c := .Subs}}
   <info>{{$c.Name | paddingName }}</> {{$c.HelpDesc}}{{if $c.Aliases}} (alias: <green>{{ join $c.Aliases ","}}</>){{end}}{{end}}
 {{end}}{{if .Cmd.Examples}}
-<comment>Examples:</>
+<comment>用例:</>
 {{.Cmd.Examples}}{{end}}{{if .Cmd.Help}}
-<comment>Help:</>
+<comment>帮助:</>
 {{.Cmd.Help}}{{end}}`
 }
