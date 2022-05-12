@@ -161,7 +161,6 @@ func (c *Client) CopyFromDevice(dst, src string, copyCbFn CopyCallbackFunc) erro
 
 func (c *Client) RemoveAll(path string) error {
 	err := c.Walk(path, func(path string, info os.FileInfo, err error) error {
-		fmt.Println("REMOVING", path)
 		if info.IsDir() {
 			return nil
 		}

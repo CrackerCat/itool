@@ -16,7 +16,7 @@ import (
 
 var ShellCmd = &gcli.Command{
 	Name: "shell",
-	Desc: "创建SSH交互环境",
+	Desc: "创建SSH交互环境,需要设备越狱",
 	Config: func(c *gcli.Command) {
 		c.AddArg("rport", "设备SSH端口")
 	},

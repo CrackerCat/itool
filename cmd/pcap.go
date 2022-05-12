@@ -18,7 +18,7 @@ import (
 
 var PcapCmd = &gcli.Command{
 	Name: "pcap",
-	Desc: "设备网络抓包，可过滤进程",
+	Desc: "对设备应用进行网络抓包, 抓包结束后执行 wireshark.sh",
 	Func: func(c *gcli.Command, args []string) error {
 		device, err := idevice.GetDefaultDevice()
 		if err != nil {
