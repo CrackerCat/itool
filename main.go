@@ -47,6 +47,8 @@ func main() {
 		cmd.ShellCmd,
 		cmd.ForwardCmd,
 		cmd.PcapCmd,
+		cmd.DebugCmd,
+		cmd.FileCmd,
 	)
 
 	os.Exit(app.Run(nil))
