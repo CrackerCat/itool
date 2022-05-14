@@ -161,17 +161,21 @@ var PullCmd = &gcli.Command{
 			return err
 		}
 
-		cli, err := afc.NewClient(device.UDID)
-		if err != nil {
-			return err
-		}
-		defer func(cli *afc.Client) {
-			_ = cli.Close()
-		}(cli)
-
-		return cli.CopyFromDevice(c.Arg("dst").String(), c.Arg("src").String(), func(dst, src string,
-			info os.FileInfo) {
-			fmt.Println(dst, "<-", src)
-		})
+		return pull(device, c.Arg("dst").String(), c.Arg("src").String())
 	},
+}
+
+func pull(device *idevice.DeviceAttachment, src, dst string) error {
+	cli, err := afc.NewClient(device.UDID)
+	if err != nil {
+		return err
+	}
+	defer func(cli *afc.Client) {
+		_ = cli.Close()
+	}(cli)
+
+	return cli.CopyFromDevice(dst, src, func(dst, src string,
+		info os.FileInfo) {
+		fmt.Println(dst, "<-", "/private/var/mobile/Media/"+src)
+	})
 }

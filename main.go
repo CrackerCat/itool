@@ -51,6 +51,7 @@ func main() {
 		cmd.DebugCmd,
 		cmd.FileCmd,
 		cmd.ScreenShotCmd,
+		cmd.FridaCmd,
 	)
 
 	os.Exit(app.Run(nil))

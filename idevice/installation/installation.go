@@ -65,6 +65,18 @@ func (c *Client) LookupExePath(bundleId string) (string, error) {
 	return "", nil
 }
 
+func (c *Client) LookupDisplayName(bundleId string) (string, error) {
+	apps, err := c.LookupRaw("CFBundleDisplayName")
+	if err != nil {
+		return "", err
+	}
+	if d, ok := apps[bundleId]; ok {
+		values := d.(map[string]interface{})
+		return values["CFBundleDisplayName"].(string), nil
+	}
+	return "", nil
+}
+
 func (c *Client) LookupContainer(bundleId string) (string, error) {
 	apps, err := c.LookupRaw("Container")
 	if err != nil {

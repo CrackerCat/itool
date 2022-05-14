@@ -141,7 +141,8 @@ func (c *Client) CopyFromDevice(dst, src string, copyCbFn CopyCallbackFunc) erro
 			// If destination is a directory, append the path to it
 			targetPath := pathpkg.Join(dst, path)
 			if info.IsDir() {
-				return os.Mkdir(targetPath, 0755)
+				_ = os.Mkdir(targetPath, 0755)
+				return nil
 			}
 			if copyCbFn != nil {
 				copyCbFn(targetPath, src, info)

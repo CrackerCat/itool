@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/gofmt/itool/idevice"
@@ -113,4 +114,81 @@ var UninstallCmd = &gcli.Command{
 
 		return cli.Uninstall(c.Arg("bundleID").String(), nil)
 	},
+}
+
+func GetAppDisplayName(device *idevice.DeviceAttachment, bundleID string) (string, error) {
+	appCli, err := installation.NewClient(device.UDID)
+	if err != nil {
+		return "", err
+	}
+	defer func(appCli *installation.Client) {
+		_ = appCli.Close()
+	}(appCli)
+
+	return appCli.LookupDisplayName(bundleID)
+}
+
+func GetAppWithBundleID(device *idevice.DeviceAttachment, bundleID string) (*installation.AppInfo, error) {
+	appCli, err := installation.NewClient(device.UDID)
+	if err != nil {
+		return nil, err
+	}
+	defer func(appCli *installation.Client) {
+		_ = appCli.Close()
+	}(appCli)
+
+	apps, err := appCli.InstalledApps()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, app := range apps {
+		if app.CFBundleIdentifier == bundleID {
+			return &app, nil
+		}
+	}
+
+	return nil, fmt.Errorf("app bundleID %s not found", bundleID)
+}
+
+func GetSelectApp(device *idevice.DeviceAttachment) (*installation.AppInfo, error) {
+	appCli, err := installation.NewClient(device.UDID)
+	if err != nil {
+		return nil, err
+	}
+	defer func(appCli *installation.Client) {
+		_ = appCli.Close()
+	}(appCli)
+
+	apps, err := appCli.InstalledApps()
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("应用列表：")
+	fmt.Println("--------------------------------------------------------------")
+	for i, app := range apps {
+		if app.CFBundleDisplayName != "" {
+			fmt.Println(i, "\t|", app.CFBundleDisplayName, "["+app.CFBundleIdentifier+"]["+app.CFBundleExecutable+"]")
+		}
+	}
+
+	fmt.Println("--------------------------------------------------------------")
+	fmt.Println("输入应用编号：")
+	var input string
+	_, err = fmt.Scan(&input)
+	if err != nil {
+		return nil, err
+	}
+
+	idx, err := strconv.Atoi(input)
+	if err != nil {
+		return nil, fmt.Errorf("'%s' 不是正确的应用ID\n", input)
+	}
+
+	if idx > len(apps)-1 {
+		return nil, fmt.Errorf("'%d' 应用ID不存在\n", idx)
+	}
+
+	return &apps[idx], nil
 }

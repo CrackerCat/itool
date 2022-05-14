@@ -49,3 +49,22 @@ func TestClient_Lookup(t *testing.T) {
 		}
 	}
 }
+
+func TestClient_Archive(t *testing.T) {
+	device, err := idevice.GetDefaultDevice()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cli, err := NewClient(device.UDID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cli.Close()
+
+	if err := cli.Archive("com.dbgman.pangolin", func(event *ProgressEvent) {
+		t.Log(event)
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

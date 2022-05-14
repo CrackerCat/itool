@@ -7,11 +7,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/gofmt/itool/idevice"
-	"github.com/gofmt/itool/idevice/installation"
 	"github.com/gofmt/itool/idevice/pcap"
 	"github.com/gookit/gcli/v3"
 )
@@ -25,51 +23,15 @@ var PcapCmd = &gcli.Command{
 			return err
 		}
 
-		appCli, err := installation.NewClient(device.UDID)
-		if err != nil {
-			return err
-		}
-		defer func(appCli *installation.Client) {
-			_ = appCli.Close()
-		}(appCli)
-
-		apps, err := appCli.InstalledApps()
+		app, err := GetSelectApp(device)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("应用列表：")
-		fmt.Println("--------------------------------------------------------------")
-		for i, app := range apps {
-			if app.CFBundleDisplayName != "" {
-				fmt.Println(i, "\t|", app.CFBundleDisplayName, "["+app.CFBundleIdentifier+"]["+app.CFBundleExecutable+"]")
-			}
-		}
-
-		fmt.Println("--------------------------------------------------------------")
-		fmt.Println("输入应用编号开始抓包：")
-		var input string
-		_, err = fmt.Scan(&input)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
-
-		idx, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Printf("'%s' 不是正确的应用ID\n", input)
-			os.Exit(-1)
-		}
-
-		if idx > len(apps)-1 {
-			fmt.Printf("'%d' 应用ID不存在\n", idx)
-			os.Exit(-1)
-		}
-
-		name := apps[idx].CFBundleDisplayName
+		name := app.CFBundleDisplayName
 		fmt.Println("["+name+"]", "正在抓包,[CTRL+C]停止抓包...")
 
-		execName := apps[idx].CFBundleExecutable
+		execName := app.CFBundleExecutable
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
 
 		pcapClient, err := pcap.NewClient(device.UDID)
