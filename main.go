@@ -52,6 +52,7 @@ func main() {
 		cmd.FileCmd,
 		cmd.ScreenShotCmd,
 		cmd.FridaCmd,
+		cmd.ScpCmd,
 	)
 
 	os.Exit(app.Run(nil))
