@@ -49,6 +49,7 @@ func main() {
 		cmd.PcapCmd,
 		cmd.DebugCmd,
 		cmd.FileCmd,
+		cmd.ScreenShotCmd,
 	)
 
 	os.Exit(app.Run(nil))

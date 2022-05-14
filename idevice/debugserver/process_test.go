@@ -1,6 +1,7 @@
 package debugserver
 
 import (
+	"io"
 	"os"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestProcess_Start(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path, err := cli.LookupExePath("me.ele.ios.eleme")
+	path, err := cli.LookupExePath("com.meituan.itakeaway")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,13 +44,16 @@ func TestProcess_Start(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proc.Kill()
-	// go func() {
-	// 	io.Copy(os.Stdout, proc.Stdout())
-	// }()
-	// if err := proc.Start(); err != nil {
-	// 	t.Fatal(err)
-	// }
-	//
-	// select {}
+	defer func(proc *Process) {
+		_ = proc.Kill()
+	}(proc)
+
+	go func() {
+		_, _ = io.Copy(os.Stdout, proc.Stdout())
+	}()
+	if err := proc.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	select {}
 }

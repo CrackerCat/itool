@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"image/png"
 	"io"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"github.com/gofmt/itool/idevice"
 	"github.com/gofmt/itool/idevice/diagnostics"
 	"github.com/gofmt/itool/idevice/lockdownd"
+	"github.com/gofmt/itool/idevice/screenshotr"
 	"github.com/gofmt/itool/idevice/syslog"
 	"github.com/gookit/color"
 	"github.com/gookit/gcli/v3"
@@ -61,6 +63,43 @@ var InfoCmd = &gcli.Command{
 		_ = w.Flush()
 
 		return nil
+	},
+}
+
+var ScreenShotCmd = &gcli.Command{
+	Name: "screenshot",
+	Desc: "设备截屏",
+	Config: func(c *gcli.Command) {
+		c.AddArg("path", "截屏图片保存路径", true)
+	},
+	Func: func(c *gcli.Command, args []string) error {
+		device, err := idevice.GetDefaultDevice()
+		if err != nil {
+			return err
+		}
+
+		cli, err := screenshotr.NewClient(device.UDID)
+		if err != nil {
+			return err
+		}
+		defer func(cli *screenshotr.Client) {
+			_ = cli.Close()
+		}(cli)
+
+		img, err := cli.ScreenshotImage()
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Create(c.Arg("path").String())
+		if err != nil {
+			return err
+		}
+		defer func(f *os.File) {
+			_ = f.Close()
+		}(f)
+
+		return png.Encode(f, img)
 	},
 }
 
