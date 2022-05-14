@@ -32,7 +32,8 @@ var ForwardCmd = &gcli.Command{
 
 		if err := forward.Start(ctx, device.UDID, lport, rport, func(s string, err error) {
 			if err != nil {
-				panic(err)
+				c.Errorln(err)
+				os.Exit(-1)
 			}
 		}); err != nil {
 			return err

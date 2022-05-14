@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"path/filepath"
 
 	"github.com/gofmt/itool/idevice"
+	"github.com/gofmt/itool/idevice/forward"
 	"github.com/gookit/gcli/v3"
 )
 
@@ -23,7 +27,113 @@ var DebugCmd = &gcli.Command{
 		}
 
 		execPath := filepath.Join(app.Path, app.CFBundleExecutable)
-		fmt.Println(execPath)
+
+		itoolPath := "/itool"
+		ok, err := iDirExsit(itoolPath)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			_, err = shellRun(rport, fmt.Sprintf(`mkdir -p %s`, itoolPath))
+			if err != nil {
+				return err
+			}
+		}
+
+		ok, err = iFileExsit("/Developer/usr/bin/debugserver")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			c.Errorln("/Developer/usr/bin/debugserver not exist. please connect idevice to Xcode")
+			c.Errorln("also you can get all iOS DeviceSupport file at https://github.com/iGhibli/iOS-DeviceSupport")
+			return nil
+		}
+
+		_, _ = shellRun(rport, `killall -9 debugserver 2> /dev/null`)
+
+		debugserverPath := itoolPath + "/debugserver"
+		ok, _ = iFileExsit(debugserverPath)
+		if !ok {
+			_, err = shellRun(rport, fmt.Sprintf(`cat > /%s/ent.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.backboardd.debugapplications</key>
+    <true/>
+    <key>com.apple.backboardd.launchapplications</key>
+    <true/>
+    <key>com.apple.diagnosticd.diagnostic</key>
+    <true/>
+    <key>com.apple.frontboard.debugapplications</key>
+    <true/>
+    <key>com.apple.frontboard.launchapplications</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+    <key>com.apple.springboard.debugapplications</key>
+    <true/>
+    <key>com.apple.system-task-ports</key>
+    <true/>
+    <key>com.apple.private.logging.diagnostic</key>
+    <true/>
+    <key>com.apple.private.memorystatus</key>
+    <true/>
+    <key>com.apple.private.cs.debugger</key>
+    <true/>
+    <key>com.apple.private.security.container-required</key>
+    <false/>
+    <key>get-task-allow</key>
+    <true/>
+    <key>platform-application</key>
+    <true/>
+    <key>run-unsigned-code</key>
+    <true/>
+    <key>task_for_pid-allow</key>
+    <true/>
+</dict>
+</plist> 
+EOF`, itoolPath))
+			if err != nil {
+				return err
+			}
+
+			_, err = shellRun(rport, fmt.Sprintf(`cp /Developer/usr/bin/debugserver %[1]s;\
+            cd %s;ldid -Sent.xml %[1]s;chmod +x  %[1]s;`, debugserverPath, itoolPath))
+			if err != nil {
+				return err
+			}
+		}
+
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+		defer cancel()
+
+		go func() {
+			defer cancel()
+
+			c.Println(fmt.Sprintf("%s debugging...", app.CFBundleDisplayName))
+			_, err = shellRun(rport, fmt.Sprintf(`%s 127.0.0.1:1234 %s -x backboard`, debugserverPath, execPath))
+			if err != nil {
+				c.Errorln(err)
+				return
+			}
+		}()
+
+		if err := forward.Start(ctx, device.UDID, 1234, 1234, func(s string, err error) {
+			if err != nil {
+				c.Errorln(err)
+				os.Exit(-1)
+			}
+		}); err != nil {
+			return err
+		}
+
+		<-ctx.Done()
+
+		c.Println(fmt.Sprintf("%s debugging has ended.", app.CFBundleDisplayName))
 
 		return nil
 	},

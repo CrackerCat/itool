@@ -180,6 +180,24 @@ func shellRun(rport int, cmd string) (result []byte, err error) {
 	return buf.Bytes(), nil
 }
 
+func iFileExsit(path string) (bool, error) {
+	result, err := shellRun(rport, fmt.Sprintf(`[ -f %s ] && echo "1" || echo "0"`, path))
+	if err != nil {
+		return false, err
+	}
+
+	return string(result[0]) == "1", nil
+}
+
+func iDirExsit(path string) (bool, error) {
+	result, err := shellRun(rport, fmt.Sprintf(`[ -d %s ] && echo "1" || echo "0"`, path))
+	if err != nil {
+		return false, err
+	}
+
+	return string(result[0]) == "1", nil
+}
+
 func newSSHClient(deviceIp string) (*ssh.Client, error) {
 	cfg := ssh.ClientConfig{
 		User: "root",
