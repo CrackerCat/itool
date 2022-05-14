@@ -124,6 +124,27 @@ var RestartCmd = &gcli.Command{
 	},
 }
 
+var ShutdownCmd = &gcli.Command{
+	Name: "shutdown",
+	Desc: "关闭设备(设备重启后需要重新越狱)",
+	Func: func(c *gcli.Command, args []string) error {
+		device, err := idevice.GetDefaultDevice()
+		if err != nil {
+			return err
+		}
+
+		cli, err := diagnostics.NewClient(device.UDID)
+		if err != nil {
+			return err
+		}
+		defer func(cli *diagnostics.Client) {
+			_ = cli.Close()
+		}(cli)
+
+		return cli.Shutdown()
+	},
+}
+
 var SyslogCmd = &gcli.Command{
 	Name: "syslog",
 	Desc: "显示设备日志",

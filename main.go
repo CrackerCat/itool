@@ -40,6 +40,7 @@ func main() {
 	app.Add(
 		cmd.InfoCmd,
 		cmd.RestartCmd,
+		cmd.ShutdownCmd,
 		cmd.SyslogCmd,
 		cmd.AppCmd,
 		cmd.InstallCmd,
