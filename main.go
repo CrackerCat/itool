@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/gofmt/itool/cmd"
@@ -21,12 +20,14 @@ func main() {
 	})
 
 	app.On(gcli.EvtAppRunError, func(data ...interface{}) (stop bool) {
-		fmt.Println(data[1])
-		return false
+		app.Println(data[1])
+		return true
 	})
 
 	app.On(gcli.EvtCmdNotFound, func(data ...interface{}) (stop bool) {
-		return false
+		app.Println(`没有这个命令 "%s"`, data[1])
+		app.Println("\n使用 itool --help 查看可用的命令")
+		return true
 	})
 
 	app.On(gcli.EvtAppCmdNotFound, func(data ...interface{}) (stop bool) {
