@@ -1,2 +1,4 @@
 .idea
 /frida/libfrida-core.a
+
+dist/
