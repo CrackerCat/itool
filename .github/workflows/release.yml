@@ -9,63 +9,103 @@
       branches:
         - main
   jobs:
+    release:
+      runs-on: ubuntu-latest
+      outputs:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+      steps:
+        - name: Create Release
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ github.ref }}
+            release_name: gocapture ${{ github.ref }}
+            draft: false
+            prerelease: false
     build-linux:
+      name: build itool for linux
+      needs: release
       strategy:
         matrix:
           GOARCH: ['amd64']
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v2
-        - uses: actions/cache@v1
-          with:
-            path: ~/go/pkg/mod
-            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-            restore-keys: |
-              ${{ runner.os }}-go-
-        - uses: actions/setup-go@v2
+        - name: Setup Go
+          uses: actions/setup-go@v2
           with:
             go-version: 1.18.x
-        - run: |
+
+        - name: install frida
+          run: |
             wget -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
             tar -xf frida.tar.xz libfrida-core.a frida-core.h
             cp libfrida-core.a frida-core.h ./frida/
-            mkdir -p dist
-            go build -o dist/itool-linux-$GOARCH
+          shell: bash
+
+        - name: build linux version
+          run: go build -o itool_linux_$GOARCH
           env:
             GOARCH: ${{ matrix.GOARCH }}
             CGO_ENABLED: 1
-          shell: bash
-        - uses: actions/upload-artifact@v2
+
+        - name: package
+          run: tar -zcvf itool_linux_$GOARCH.tgz itool_linux_$GOARCH
+          env:
+            GOARCH: ${{ matrix.GOARCH }}
+
+        - name: upload
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GOARCH: ${{ matrix.GOARCH }}
           with:
-            name: itool-linux.zip
-            path: dist/itool-linux-*
+            upload_url: ${{ needs.release.outputs.upload_url }}
+            asset_path: itool_linux_$GOARCH.tgz
+            asset_name: itool_linux_$GOARCH.tgz
+            asset_content_type: application/gzip
+
     build-macos:
+      name: build itool for macos
+      needs: release
       strategy:
         matrix:
           GOARCH: ['amd64']
       runs-on: macos-latest
       steps:
         - uses: actions/checkout@v2
-        - uses: actions/cache@v1
-          with:
-            path: ~/go/pkg/mod
-            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-            restore-keys: |
-              ${{ runner.os }}-go-
-        - uses: actions/setup-go@v2
+        - name: Setup Go
+          uses: actions/setup-go@v2
           with:
             go-version: 1.18.x
-        - run: |
+
+        - name: install frida
+          run: |
             wget -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-macos-x86_64.tar.xz
             tar -xf frida.tar.xz libfrida-core.a frida-core.h
             cp libfrida-core.a frida-core.h ./frida/
-            mkdir -p dist
-            go build -o dist/itool-macos-$GOARCH
+          shell: bash
+
+        - name: build macos version
+          run: go build -o itool_macos_$GOARCH
           env:
             GOARCH: ${{ matrix.GOARCH }}
             CGO_ENABLED: 1
-          shell: bash
-        - uses: actions/upload-artifact@v2
+
+        - name: package
+          run: tar -zcvf itool_macos_$GOARCH.tgz itool_macos_$GOARCH
+          env:
+            GOARCH: ${{ matrix.GOARCH }}
+
+        - name: upload
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GOARCH: ${{ matrix.GOARCH }}
           with:
-            name: itool-macos-$GOARCH.zip
-            path: dist/itool-macos-*
+            upload_url: ${{ needs.release.outputs.upload_url }}
+            asset_path: itool_macos_$GOARCH.tgz
+            asset_name: itool_macos_$GOARCH.tgz
+            asset_content_type: application/gzip
