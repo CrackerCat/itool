@@ -2,21 +2,30 @@ package cmd
 
 import (
 	"context"
+	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"syscall"
 
+	"github.com/gofmt/itool/frida"
 	"github.com/gofmt/itool/idevice"
 	"github.com/gofmt/itool/idevice/pcap"
 	"github.com/gookit/gcli/v3"
 )
 
+var bTLS = false
+
+//go:embed keylog.js
+var keylogSource string
+
 var PcapCmd = &gcli.Command{
 	Name: "pcap",
-	Desc: "对设备应用进行网络抓包, 抓包结束后执行 wireshark.sh",
+	Desc: "对设备应用进行网络抓包,支持TLS解密,抓包结束后执行 wireshark.sh",
+	Config: func(c *gcli.Command) {
+		c.BoolOpt(&bTLS, "tls", "t", false, "启用TLS解密")
+	},
 	Func: func(c *gcli.Command, args []string) error {
 		device, err := idevice.GetDefaultDevice()
 		if err != nil {
@@ -32,7 +41,24 @@ var PcapCmd = &gcli.Command{
 		fmt.Println("["+name+"]", "正在抓包,[CTRL+C]停止抓包...")
 
 		execName := app.CFBundleExecutable
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
+		if bTLS {
+			keylogFile, err := os.Create(execName + ".keylog")
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = keylogFile.Close()
+			}()
+
+			go func() {
+				if err := frida.Start(ctx, device.UDID, app.CFBundleIdentifier, keylogSource, func(s string, bs []byte) {
+					c.Println(s)
+				}); err != nil {
+					c.Errorln(err)
+				}
+			}()
+		}
 
 		pcapClient, err := pcap.NewClient(device.UDID)
 		if err != nil {
@@ -68,7 +94,7 @@ var PcapCmd = &gcli.Command{
 		cancel()
 
 		// wireshark -r xxx.pcap -o "tls.keylog_file:./xxx.keylog"
-		wiresharkParam := fmt.Sprintf(`wireshark -r %s.pcap`, name)
+		wiresharkParam := fmt.Sprintf(`wireshark -r %s.pcap -o "tls.keylog_file:./%s.keylog"`, name, execName)
 		_ = ioutil.WriteFile("wireshark.sh", []byte(wiresharkParam), os.ModePerm)
 
 		fmt.Println("["+name+"]", "抓包结束")
