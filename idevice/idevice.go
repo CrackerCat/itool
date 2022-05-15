@@ -2,6 +2,9 @@ package idevice
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 func GetDefaultDevice() (*DeviceAttachment, error) {
@@ -19,7 +22,19 @@ func GetDefaultDevice() (*DeviceAttachment, error) {
 	}
 
 	if len(devices) < 1 {
-		return nil, errors.New("not device")
+		return nil, errors.New("not found device")
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	bs, err := ioutil.ReadFile(filepath.Join(homeDir, ".itool"))
+	if err != nil {
+		return devices[0], nil
+	}
+
+	for _, device := range devices {
+		if device.UDID == string(bs) {
+			return device, nil
+		}
 	}
 
 	return devices[0], nil

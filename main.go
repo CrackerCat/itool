@@ -38,6 +38,7 @@ func main() {
 	})
 
 	app.Add(
+		cmd.DeviceCmd,
 		cmd.InfoCmd,
 		cmd.RestartCmd,
 		cmd.ShutdownCmd,

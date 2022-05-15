@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/tabwriter"
@@ -22,6 +25,81 @@ import (
 	"github.com/gookit/color"
 	"github.com/gookit/gcli/v3"
 )
+
+var DeviceCmd = &gcli.Command{
+	Name: "device",
+	Desc: "选择默认设备",
+	Func: func(c *gcli.Command, args []string) error {
+		conn, err := idevice.NewConn()
+		if err != nil {
+			return err
+		}
+		defer func(conn *idevice.Conn) {
+			_ = conn.Close()
+		}(conn)
+
+		devices, err := conn.ListDevices()
+		if err != nil {
+			return err
+		}
+
+		w := new(tabwriter.Writer)
+		w.Init(os.Stdout, 0, 0, 1, ' ', 0)
+		_, _ = fmt.Fprintln(w, "--------------------------------------------------------------")
+
+		for i, device := range devices {
+			cli, err := lockdownd.NewClient(device.UDID)
+			if err != nil {
+				return err
+			}
+
+			info, err := cli.GetValues()
+			if err != nil {
+				_ = cli.Close()
+				return err
+			}
+
+			_ = cli.Close()
+
+			_, _ = fmt.Fprintln(w, "- Number\t: "+strconv.Itoa(i))
+			_, _ = fmt.Fprintln(w, "- UDID\t: "+info.UniqueDeviceID)
+			_, _ = fmt.Fprintln(w, "- DeviceName\t: "+info.DeviceName)
+			_, _ = fmt.Fprintln(w, "- ProductName\t: "+info.ProductName)
+			_, _ = fmt.Fprintln(w, "- ProductType\t: "+info.ProductType)
+			_, _ = fmt.Fprintln(w, "- ProductVersion\t: "+info.ProductVersion)
+			_, _ = fmt.Fprintln(w, "- CPUArchitecture\t: "+info.CPUArchitecture)
+			_, _ = fmt.Fprintln(w, "- BuildVersion\t: "+info.BuildVersion)
+			_, _ = fmt.Fprintln(w, "- WiFiAddress\t: "+info.WiFiAddress)
+			_, _ = fmt.Fprintln(w, "- DeviceColor\t: "+info.DeviceColor)
+			_, _ = fmt.Fprintln(w, "- HardwareModel\t: "+info.HardwareModel)
+			_, _ = fmt.Fprintln(w, "- UniqueChipID\t: "+fmt.Sprintf("%d", info.UniqueChipID))
+			_, _ = fmt.Fprintln(w, "--------------------------------------------------------------")
+
+		}
+
+		_ = w.Flush()
+
+		fmt.Println("输入设备编号并设置为默认设备：")
+		var input string
+		_, err = fmt.Scan(&input)
+		if err != nil {
+			return err
+		}
+
+		idx, err := strconv.Atoi(input)
+		if err != nil {
+			return fmt.Errorf("'%s' 不是正确的设备编号\n", input)
+		}
+
+		if idx > len(devices)-1 {
+			return fmt.Errorf("'%d' 设备编号不存在\n", idx)
+		}
+
+		homeDir, _ := os.UserHomeDir()
+		device := devices[idx]
+		return ioutil.WriteFile(filepath.Join(homeDir, ".itool"), []byte(device.UDID), os.ModePerm)
+	},
+}
 
 var InfoCmd = &gcli.Command{
 	Name: "info",
