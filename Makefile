@@ -3,13 +3,12 @@ K := $(foreach exec,$(EXECUTABLES),\
         $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
 
 VERSION ?= $(shell git describe --tags `git rev-list --tags --max-count=1`)
-BINARY = itool
-MAIN = main.go
-
-BUILDDIR = dist
 GITREV = $(shell git rev-parse --short HEAD)
 BUILDTIME = $(shell date +'%FT%TZ%z')
 GO_BUILDER_VERSION=latest
+
+install: deps
+	go install -ldflags "-s -w -X main.version=$(VERSION)"
 
 deps:
 ifeq ($(wildcard frida/linux/libfrida-core.a),)
@@ -40,3 +39,6 @@ release: deps
 	-v $(GOPATH)/src:/go/src \
 	-w /itool \
 	ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --rm-dist
+
+clean:
+	rm -rf $(shell pwd)/dist/
