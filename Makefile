@@ -31,3 +31,12 @@ snapshot: deps
 	-v $(GOPATH)/src:/go/src \
 	-w /itool \
 	ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --snapshot --rm-dist
+
+release: deps
+	docker run --rm --privileged \
+	-e GITHUB_TOKEN=$(GITHUB_TOKEN) \
+	-v $(CURDIR):/itool \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	-v $(GOPATH)/src:/go/src \
+	-w /itool \
+	ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --rm-dist

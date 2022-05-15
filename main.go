@@ -7,11 +7,15 @@ import (
 	"github.com/gookit/gcli/v3"
 )
 
+var (
+	version = "1.0.1-beta"
+)
+
 func main() {
 	gcli.DefaultVerb = gcli.VerbQuiet
 
 	app := gcli.NewApp(func(app *gcli.App) {
-		app.Version = "v1.0.1-beta"
+		app.Version = "v" + version
 		app.Desc = "itool"
 		app.ExitOnEnd = false
 		app.On(gcli.EvtAppInit, func(data ...interface{}) (stop bool) {
