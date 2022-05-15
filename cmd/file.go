@@ -179,3 +179,17 @@ func pull(device *idevice.DeviceAttachment, src, dst string) error {
 		fmt.Println(dst, "<-", "/private/var/mobile/Media/"+src)
 	})
 }
+
+func push(device *idevice.DeviceAttachment, src, dst string) error {
+	cli, err := afc.NewClient(device.UDID)
+	if err != nil {
+		return err
+	}
+	defer func(cli *afc.Client) {
+		_ = cli.Close()
+	}(cli)
+
+	return cli.CopyToDevice(dst, src, func(dst, src string, info os.FileInfo) {
+		fmt.Println(src, "->", "/private/var/mobile/Media/"+dst)
+	})
+}
