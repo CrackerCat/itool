@@ -25,14 +25,8 @@
         - uses: wei/wget@v1
           with:
             args: -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
-        - uses: a7ul/tar-action@v1.1.0
-          id: extract
-          with:
-            command: xf
-            cwd: ./extract
-            files: ./frida.tar.xz
         - run: |
-            cp ./extract/libfrida-core.a /frida/libfrida-core.a
+            tar -xf frida.tar.xz libfrida-core.a -C ./frida/
             mkdir -p dist
             go build -o dist/itool-linux-$GOARCH
           env:
