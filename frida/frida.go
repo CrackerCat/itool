@@ -66,7 +66,9 @@ func Start(ctx context.Context, udid, bundleID, source string, callback func(str
 		return fmt.Errorf("spawn target error: %v", C.GoString(gerr.message))
 	}
 
-	session := C.frida_device_attach_sync(device, pid, C.FRIDA_REALM_NATIVE, nil, &gerr)
+	opts := C.frida_session_options_new()
+	defer C.frida_unref(C.gpointer(opts))
+	session := C.frida_device_attach_sync(device, pid, opts, nil, &gerr)
 	if gerr != nil {
 		return fmt.Errorf("attach target error: %v", C.GoString(gerr.message))
 	}
