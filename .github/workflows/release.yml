@@ -28,9 +28,9 @@
         - uses: a7ul/tar-action@v1.1.0
           id: extract
           with:
-            command: x
+            command: xf
             cwd: ./extract
-            files: frida.tar.xz
+            files: ./frida.tar.xz
         - run: |
             cp ./extract/libfrida-core.a /frida/libfrida-core.a
             mkdir -p dist
