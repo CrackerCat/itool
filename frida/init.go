@@ -1,11 +1,9 @@
-// go:build frida
-
 package frida
 
 /*
  #cgo CFLAGS: -g -O2 -w -I. -I./
  #cgo darwin LDFLAGS: -framework Foundation -framework AppKit -lbsm -lresolv -L./ -lfrida-core
- #cgo linux LDFLAGS: -static-libgcc -L${SRCDIR}/libs -lfrida-core -ldl -lm -lrt -lresolv -lpthread -Wl,--export-dynamic
+ #cgo linux LDFLAGS: -static-libgcc -L./ -lfrida-core -ldl -lm -lrt -lresolv -lpthread -Wl,--export-dynamic
  #include "frida-core.h"
 
  void cgo_on_message(FridaScript *script, const gchar *message, GBytes *data, gpointer user_data) {
