@@ -1,0 +1,45 @@
+  name: Build Release
+  on:
+    push:
+      tags:
+        - v*
+      branches:
+        - main
+  jobs:
+    build-linux:
+      strategy:
+        matrix:
+          GOARCH: ['amd64']
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+        - uses: actions/cache@v1
+          with:
+            path: ~/go/pkg/mod
+            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            restore-keys: |
+              ${{ runner.os }}-go-
+        - uses: actions/setup-go@v2
+          with:
+            go-version: 1.18.x
+        - uses: wei/wget@v1
+          with:
+            args: -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
+        - uses: a7ul/tar-action@v1.1.0
+          id: extract
+          with:
+            command: x
+            cwd: ./extract
+            files: frida.tar.xz
+        - run: |
+            cp ./extract/libfrida-core.a /frida/libfrida-core.a
+            mkdir -p dist
+            go build -o dist/itool-linux-$GOARCH
+          env:
+            GOARCH: ${{ matrix.GOARCH }}
+            CGO_ENABLED: 1
+          shell: bash
+        - uses: actions/upload-artifact@v2
+          with:
+            name: dist-linux
+            path: dist/itool-linux-*
