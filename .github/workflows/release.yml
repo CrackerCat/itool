@@ -26,9 +26,7 @@
           with:
             args: -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
         - run: |
-            tar -xf frida.tar.xz libfrida-core.a
-            cp libfrida-core.a ./frida/
-            ls -la frida
+            tar -xf frida.tar.xz libfrida-core.a -C ./frida/
             mkdir -p dist
             go build -o dist/itool-linux-$GOARCH
           env:
