@@ -5,6 +5,9 @@
         - v*
       branches:
         - main
+    pull_request:
+      branches:
+        - main
   jobs:
     build-linux:
       strategy:
@@ -22,10 +25,8 @@
         - uses: actions/setup-go@v2
           with:
             go-version: 1.18.x
-        - uses: wei/wget@v1
-          with:
-            args: -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
         - run: |
+            wget -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-linux-x86_64.tar.xz
             tar -xf frida.tar.xz libfrida-core.a frida-core.h
             cp libfrida-core.a frida-core.h ./frida/
             mkdir -p dist
@@ -54,10 +55,8 @@
         - uses: actions/setup-go@v2
           with:
             go-version: 1.18.x
-        - uses: wei/wget@v1
-          with:
-            args: -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-macos-x86_64.tar.xz
         - run: |
+            wget -O frida.tar.xz https://github.com/frida/frida/releases/download/15.1.22/frida-core-devkit-15.1.22-macos-x86_64.tar.xz
             tar -xf frida.tar.xz libfrida-core.a frida-core.h
             cp libfrida-core.a frida-core.h ./frida/
             mkdir -p dist
