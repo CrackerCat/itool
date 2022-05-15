@@ -1,9 +1,10 @@
 package frida
 
 /*
- #cgo CFLAGS: -g -O2 -w -I. -I./
- #cgo darwin LDFLAGS: -framework Foundation -framework AppKit -lbsm -lresolv -L./ -lfrida-core
- #cgo linux LDFLAGS: -static-libgcc -L./ -lfrida-core -ldl -lm -lrt -lresolv -lpthread -Wl,--export-dynamic
+ #cgo darwin CFLAGS: -g -O2 -w -I./macos
+ #cgo linux CFLAGS: -g -O2 -w -I./linux
+ #cgo darwin LDFLAGS: -framework Foundation -framework AppKit -lbsm -lresolv -L./macos -lfrida-core
+ #cgo linux LDFLAGS: -static-libgcc -L./linux -lfrida-core -ldl -lm -lrt -lresolv -lpthread -Wl,--export-dynamic
  #include "frida-core.h"
 
  void cgo_on_message(FridaScript *script, const gchar *message, GBytes *data, gpointer user_data) {

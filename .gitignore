@@ -1,4 +1,5 @@
 .idea
-/frida/libfrida-core.a
+*.a
 .DS_Store
 dist/
+
