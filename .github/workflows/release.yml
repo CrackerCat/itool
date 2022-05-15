@@ -28,7 +28,7 @@
         - run: |
             tar -xf frida.tar.xz libfrida-core.a
             cp libfrida-core.a ./frida/
-            ls -la
+            ls -la frida
             mkdir -p dist
             go build -o dist/itool-linux-$GOARCH
           env:
